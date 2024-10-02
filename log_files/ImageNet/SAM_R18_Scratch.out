@@ -1,60 +1,25 @@
 adaptive False
 batch_size 2048
 bz_test 2048
-dropout 0.0
 epochs 200
-label_smoothing 0.1
 learning_rate 0.01
 momentum 0.9
 threads 2
 rho 0.05
 weight_decay 0.0001
 dataset_path /mnt/reference/imagenet-2012/imagenet-2012_20210302
-mode self_norm
 dataset imagenet
 model_name resnet18
 lr_schedule cosine
 rho_lst [0.05, 0.05]
-rho_lst_min [-1.0, -1.0]
-rho_sche constant
-data_split [0.5, 0.5]
-sam False
-sgd False
-n_branch 1
-otmdr False
-otmdr_min False
-merge_grad False
-noise_var 0
 img_size 32
 random_seed 42
 log_dir logs/imagenet/SAM_R18_Scratch_rho0.05_200e
 fine_tune True
-true_grad False
-val_from None
-total_val 0
 bz_val 512
-num_chunk_val 1
-uphill_syntax t_0, -1, v_0
-use_val_frequence 1
-new_val_frequency 1
-update_mode None
-use_val_epoch -1
 training_mode sam
-Mstep 1
-reverse_theta False
-save_true_grad False
-softmax_tem 1
-handy_var None
-NOT_update_on_val False
 label_noise_rate 0.2
-correct_split False
-momentum_rho 1.0
-max_rho 100
-mask_weight 1.0
 pretrain False
-loss_fn smooth_ce
-warm_up_epoch 0
-reload_dataset False
 base_op sgd
 eval_only False
 Len full dataset 1281167
