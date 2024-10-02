@@ -1,8 +1,5 @@
 # Agnostic Sharpness-Aware Minimization
-Codes for **Agnostic-SAM** on MAML setting.
+Codes for **SAM** and **Agnostic-SAM** on MAML setting.
 
-
-## Run codes 
-
-
-
+Refer to `lower` folder to apply SAM on lower-loss in meta learning
+Refer to `lower_AgSAM` folder to apply Agnostic-SAM on lower-loss in meta learning
