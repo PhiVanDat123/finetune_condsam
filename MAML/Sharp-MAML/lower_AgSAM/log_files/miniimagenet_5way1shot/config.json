@@ -1,0 +1,23 @@
+{
+    "folder": "../dataset",
+    "dataset": "miniimagenet",
+    "output_folder": "logs/miniimagenet_5way1shot",
+    "num_ways": 5,
+    "num_shots": 1,
+    "num_shots_test": 15,
+    "hidden_size": 64,
+    "batch_size": 4,
+    "num_steps": 5,
+    "num_epochs": 600,
+    "num_batches": 100,
+    "step_size": 0.1,
+    "first_order": false,
+    "meta_lr": 0.001,
+    "num_workers": 8,
+    "verbose": false,
+    "use_cuda": true,
+    "alpha": 0.005,
+    "adap": false,
+    "SAM_lower": true,
+    "model_path": "logs/miniimagenet_5way1shot/model.th"
+}

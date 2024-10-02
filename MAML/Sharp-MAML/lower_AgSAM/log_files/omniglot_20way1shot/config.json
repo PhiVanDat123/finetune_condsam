@@ -1,0 +1,23 @@
+{
+  "folder": "../dataset",
+  "dataset": "omniglot",
+  "output_folder": "logs/omniglot_20way1shot",
+  "num_ways": 20,
+  "num_shots": 1,
+  "num_shots_test": 15,
+  "hidden_size": 64,
+  "batch_size": 16,
+  "num_steps": 3,
+  "num_epochs": 600,
+  "num_batches": 100,
+  "step_size": 0.1,
+  "first_order": false,
+  "meta_lr": 0.001,
+  "num_workers": 8,
+  "verbose": false,
+  "use_cuda": true,
+  "alpha": 0.0005,
+  "adap": false,
+  "SAM_lower": true,
+  "model_path": "logs/omniglot_20way1shot/model.th"
+}
