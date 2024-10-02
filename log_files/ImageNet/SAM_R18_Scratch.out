@@ -1,0 +1,269 @@
+adaptive False
+batch_size 2048
+bz_test 2048
+dropout 0.0
+epochs 200
+label_smoothing 0.1
+learning_rate 0.01
+momentum 0.9
+threads 2
+rho 0.05
+weight_decay 0.0001
+dataset_path /mnt/reference/imagenet-2012/imagenet-2012_20210302
+mode self_norm
+dataset imagenet
+model_name resnet18
+lr_schedule cosine
+rho_lst [0.05, 0.05]
+rho_lst_min [-1.0, -1.0]
+rho_sche constant
+data_split [0.5, 0.5]
+sam False
+sgd False
+n_branch 1
+otmdr False
+otmdr_min False
+merge_grad False
+noise_var 0
+img_size 32
+random_seed 42
+log_dir logs/imagenet/SAM_R18_Scratch_rho0.05_200e
+fine_tune True
+true_grad False
+val_from None
+total_val 0
+bz_val 512
+num_chunk_val 1
+uphill_syntax t_0, -1, v_0
+use_val_frequence 1
+new_val_frequency 1
+update_mode None
+use_val_epoch -1
+training_mode sam
+Mstep 1
+reverse_theta False
+save_true_grad False
+softmax_tem 1
+handy_var None
+NOT_update_on_val False
+label_noise_rate 0.2
+correct_split False
+momentum_rho 1.0
+max_rho 100
+mask_weight 1.0
+pretrain False
+loss_fn smooth_ce
+warm_up_epoch 0
+reload_dataset False
+base_op sgd
+eval_only False
+Len full dataset 1281167
+===
+Train with train_sam
+===
+Continue training model:
+Load model from logs/imagenet/SAM_R18_Scratch_rho0.05_200e/checkpoint_42-50.pt
+      1.7622  │     56.13 %  ┃
+Acc top 5: 79.7060
+Remove checkpoint_42-50.pt
+Remove checkpoint_42-51.pt
+Remove checkpoint_42-52.pt
+
+┃          54  ┃      1.4061  │     65.09 %  │      0.0967  ┃   9.456e-03  │   61:26 min  ┃      1.7509  │     56.33 %  ┃
+Acc top 5: 80.0180
+Remove checkpoint_42-53.pt
+Remove checkpoint_42-54.pt
+Remove checkpoint_42-55.pt
+Remove checkpoint_42-56.pt
+Remove checkpoint_42-57.pt
+
+┃          59  ┃      1.3527  │     66.47 %  │      0.0974  ┃   9.413e-03  │   64:00 min  ┃      1.7097  │     57.19 %  ┃
+Acc top 5: 80.7160
+Remove checkpoint_42-58.pt
+Remove checkpoint_42-59.pt
+Remove checkpoint_42-60.pt
+Remove checkpoint_42-61.pt
+Remove checkpoint_42-62.pt
+
+┃          64  ┃      1.3044  │     67.69 %  │      0.0980  ┃   9.341e-03  │   62:39 min  ┃      1.6928  │     57.77 %  ┃
+Acc top 5: 80.9480
+Remove checkpoint_42-63.pt
+Remove checkpoint_42-64.pt
+Remove checkpoint_42-65.pt
+Remove checkpoint_42-66.pt
+Remove checkpoint_42-67.pt
+
+LOG FILE IS OVERRIDE
+
+┃          94  ┃      1.0930  │     73.23 %  │      0.1021  ┃   9.079e-03  │   70:41 min  ┃      1.5771  │     60.61 %  ┃
+Acc top 5: 82.8680
+Remove checkpoint_42-93.pt
+Remove checkpoint_42-94.pt
+Remove checkpoint_42-95.pt
+Remove checkpoint_42-96.pt
+Remove checkpoint_42-97.pt
+
+┃          99  ┃      1.0675  │     73.92 %  │      0.1030  ┃   9.043e-03  │   65:22 min  ┃      1.5616  │     60.68 %  ┃
+Acc top 5: 82.9960
+Remove checkpoint_42-98.pt
+Remove checkpoint_42-99.pt
+Remove checkpoint_42-100.pt
+Remove checkpoint_42-101.pt
+Remove checkpoint_42-102.pt
+
+┃         104  ┃      1.0433  │     74.62 %  │      0.1038  ┃   8.980e-03  │   64:00 min  ┃      1.5594  │     60.86 %  ┃
+Acc top 5: 83.2300
+Remove checkpoint_42-103.pt
+Remove checkpoint_42-104.pt
+Remove checkpoint_42-105.pt
+Remove checkpoint_42-106.pt
+Remove checkpoint_42-107.pt
+
+┃         109  ┃      1.0019  │     75.85 %  │      0.1035  ┃   8.926e-03  │   69:52 min  ┃      1.5401  │     61.14 %  ┃
+Acc top 5: 83.6440
+Remove checkpoint_42-108.pt
+Remove checkpoint_42-109.pt
+Remove checkpoint_42-110.pt
+Remove checkpoint_42-111.pt
+Remove checkpoint_42-112.pt
+
+┃         114  ┃      0.9860  │     76.26 %  │      0.1052  ┃   8.902e-03  │   76:34 min  ┃      1.5347  │     61.53 %  ┃
+Acc top 5: 83.6880
+Remove checkpoint_42-113.pt
+Remove checkpoint_42-114.pt
+Remove checkpoint_42-115.pt
+Remove checkpoint_42-116.pt
+Remove checkpoint_42-117.pt
+
+┃         119  ┃      0.9654  │     76.88 %  │      0.1057  ┃   8.850e-03  │   77:45 min  ┃      1.5534  │     61.01 %  ┃
+Acc top 5: 83.4380
+Remove checkpoint_42-118.pt
+Remove checkpoint_42-119.pt
+Remove checkpoint_42-120.pt
+Remove checkpoint_42-121.pt
+Remove checkpoint_42-122.pt
+
+┃         124  ┃      0.9398  │     77.60 %  │      0.1061  ┃   8.804e-03  │   69:10 min  ┃      1.5272  │     61.59 %  ┃
+Acc top 5: 83.8840
+Remove checkpoint_42-123.pt
+Remove checkpoint_42-124.pt
+Remove checkpoint_42-125.pt
+Remove checkpoint_42-126.pt
+Remove checkpoint_42-127.pt
+
+┃         129  ┃      0.9260  │     78.01 %  │      0.1076  ┃   8.780e-03  │   64:03 min  ┃      1.5271  │     61.78 %  ┃
+Acc top 5: 83.7500
+Remove checkpoint_42-128.pt
+Remove checkpoint_42-129.pt
+Remove checkpoint_42-130.pt
+Remove checkpoint_42-131.pt
+Remove checkpoint_42-132.pt
+
+┃         134  ┃      0.9090  │     78.53 %  │      0.1081  ┃   8.729e-03  │   67:16 min  ┃      1.5456  │     61.34 %  ┃
+Acc top 5: 83.6080
+Remove checkpoint_42-133.pt
+Remove checkpoint_42-134.pt
+Remove checkpoint_42-135.pt
+Remove checkpoint_42-136.pt
+Remove checkpoint_42-137.pt
+
+┃         139  ┃      0.9076  │     78.46 %  │      0.1098  ┃   8.652e-03  │   74:37 min  ┃      1.5374  │     61.62 %  ┃
+Acc top 5: 83.7600
+Remove checkpoint_42-138.pt
+Remove checkpoint_42-139.pt
+Remove checkpoint_42-140.pt
+Remove checkpoint_42-141.pt
+Remove checkpoint_42-142.pt
+
+┃         144  ┃      0.9055  │     78.46 %  │      0.1102  ┃   8.639e-03  │   70:33 min  ┃      1.5349  │     61.51 %  ┃
+Acc top 5: 83.7740
+Remove checkpoint_42-143.pt
+Remove checkpoint_42-144.pt
+Remove checkpoint_42-145.pt
+Remove checkpoint_42-146.pt
+Remove checkpoint_42-147.pt
+
+┃         149  ┃      0.8922  │     78.86 %  │      0.1108  ┃   8.599e-03  │   67:36 min  ┃      1.5284  │     61.68 %  ┃
+Acc top 5: 83.8760
+Remove checkpoint_42-148.pt
+Remove checkpoint_42-149.pt
+Remove checkpoint_42-150.pt
+Remove checkpoint_42-151.pt
+Remove checkpoint_42-152.pt
+
+┃         154  ┃      0.8776  │     79.31 %  │      0.1110  ┃   8.534e-03  │   70:02 min  ┃      1.5348  │     61.60 %  ┃
+Acc top 5: 83.7500
+Remove checkpoint_42-153.pt
+Remove checkpoint_42-154.pt
+Remove checkpoint_42-155.pt
+Remove checkpoint_42-156.pt
+Remove checkpoint_42-157.pt
+
+┃         159  ┃      0.8661  │     79.63 %  │      0.1118  ┃   8.442e-03  │   63:53 min  ┃      1.5291  │     61.84 %  ┃
+Acc top 5: 83.8080
+Remove checkpoint_42-158.pt
+Remove checkpoint_42-159.pt
+Remove checkpoint_42-160.pt
+Remove checkpoint_42-161.pt
+Remove checkpoint_42-162.pt
+
+┃         164  ┃      0.8542  │     79.97 %  │      0.1127  ┃   8.444e-03  │   63:20 min  ┃      1.5138  │     61.93 %  ┃
+Acc top 5: 83.9020
+Remove checkpoint_42-163.pt
+Remove checkpoint_42-164.pt
+Remove checkpoint_42-165.pt
+Remove checkpoint_42-166.pt
+Remove checkpoint_42-167.pt
+
+┃         169  ┃      0.8427  │     80.30 %  │      0.1133  ┃   8.400e-03  │   83:25 min  ┃      1.5401  │     61.58 %  ┃
+Acc top 5: 83.6700
+Remove checkpoint_42-168.pt
+Remove checkpoint_42-169.pt
+Remove checkpoint_42-170.pt
+Remove checkpoint_42-171.pt
+Remove checkpoint_42-172.pt
+
+┃         174  ┃      0.8320  │     80.64 %  │      0.1139  ┃   8.331e-03  │   67:57 min  ┃      1.5106  │     62.20 %  ┃
+Acc top 5: 84.1700
+Remove checkpoint_42-173.pt
+Remove checkpoint_42-174.pt
+Remove checkpoint_42-175.pt
+Remove checkpoint_42-176.pt
+Remove checkpoint_42-177.pt
+
+┃         179  ┃      0.8207  │     81.02 %  │      0.1144  ┃   8.237e-03  │   67:21 min  ┃      1.5219  │     62.11 %  ┃
+Acc top 5: 84.0680
+Remove checkpoint_42-178.pt
+Remove checkpoint_42-179.pt
+Remove checkpoint_42-180.pt
+Remove checkpoint_42-181.pt
+Remove checkpoint_42-182.pt
+
+┃         184  ┃      0.7983  │     81.75 %  │      0.1145  ┃   8.239e-03  │   67:31 min  ┃      1.5168  │     62.06 %  ┃
+Acc top 5: 84.1260
+Remove checkpoint_42-183.pt
+Remove checkpoint_42-184.pt
+Remove checkpoint_42-185.pt
+Remove checkpoint_42-186.pt
+Remove checkpoint_42-187.pt
+
+┃         189  ┃      0.7892  │     82.03 %  │      0.1151  ┃   8.197e-03  │   68:11 min  ┃      1.5409  │     61.66 %  ┃
+Acc top 5: 83.8140
+Remove checkpoint_42-188.pt
+Remove checkpoint_42-189.pt
+Remove checkpoint_42-190.pt
+Remove checkpoint_42-191.pt
+Remove checkpoint_42-192.pt
+
+┃         194  ┃      0.7807  │     82.31 %  │      0.1158  ┃   8.129e-03  │   66:07 min  ┃      1.5180  │     62.33 %  ┃
+Acc top 5: 84.1420
+Remove checkpoint_42-193.pt
+Remove checkpoint_42-194.pt
+Remove checkpoint_42-195.pt
+Remove checkpoint_42-196.pt
+Remove checkpoint_42-197.pt
+
+┃         199  ┃      0.7715  │     82.62 %  │      0.1163  ┃   8.037e-03  │   67:11 min  ┃      1.5191  │     62.46 %  ┃
+Acc top 5: 84.1920
+Remove checkpoint_42-198.pt
+      1.5191  │     62.46 %  ┃
