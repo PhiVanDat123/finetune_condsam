@@ -114,11 +114,11 @@ def train_agnosticSAM(args, model, dataset):
     if args.base_op == "adam":
         base_optimizer = torch.optim.Adam
         optimizer = AgnosticSAM(model.parameters(), base_optimizer, adaptive=args.adaptive,
-                              lr=args.learning_rate, weight_decay=args.weight_decay, rho_lst=args.rho_lst, agsam_mom=args.agsam_mom)
+                              lr=args.learning_rate, weight_decay=args.weight_decay, agsam_lambda=args.agsam_lambda)
     else:
         base_optimizer = torch.optim.SGD
         optimizer = AgnosticSAM(model.parameters(), base_optimizer, adaptive=args.adaptive,
-                              lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay, rho_lst=args.rho_lst, agsam_mom=args.agsam_mom)
+                              lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay, agsam_lambda=args.agsam_lambda)
     
     optimizer.assign_name(model)
     str_e = 0
@@ -396,7 +396,7 @@ if __name__ == "__main__":
     parser.add_argument("--learning_rate", default=0.1, type=float, help="Base learning rate at the start of the training.")
     parser.add_argument("--momentum", default=0.9, type=float, help="SGD Momentum.")
     parser.add_argument("--threads", default=8, type=int, help="Number of CPU threads for dataloaders.")
-    parser.add_argument("--rho", default=2.0, type=float, help="Rho parameter for SAM.")
+    parser.add_argument("--rho", default=0.1, type=float, help="Rho parameter for SAM.")
     parser.add_argument("--weight_decay", default=0.0005, type=float, help="L2 weight decay.")
 
     parser.add_argument("--dataset_path", default="/home/ubuntu/vit_selfOT/ViT-pytorch/data", type=str, help="link to dataset")
@@ -404,7 +404,7 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, default="cifar10", help="name of dataset to load")
     parser.add_argument("--model_name", type=str, default="WRN", help="model_name to load")
     parser.add_argument("--lr_schedule", type=str, default="cosine", help="lr_schedule: step, cosine")
-    parser.add_argument("--rho_lst", type=str, default="0.1_0.05", help="using format: rho1_rho2 to set perturbation radius for AgnosticSAM")
+    parser.add_argument("--agsam_lambda", type=float, default=2.0, help="trade-off agsam_lambda for AgnosticSAM")
     parser.add_argument("--img_size", type=int, default=32, help="Size of input image")
     parser.add_argument("--random_seed", type=int, default=42, help="Random seed")
     parser.add_argument("--log_dir", type=str, default=None, help="folder to save model")
@@ -416,10 +416,8 @@ if __name__ == "__main__":
     parser.add_argument("--base_op", type=str, default="sgd")
     parser.add_argument("--eval_only", action="store_true", help="Only eval model")
     parser.add_argument("--debug", action="store_true", help="Only eval model")
-    parser.add_argument("--agsam_mom", type=float, default=0.9)
     
     args = parser.parse_args()
-    args.rho_lst = [float(it) for it in args.rho_lst.split("_")]
     
     for arg_item in vars(args):
         print(arg_item, getattr(args, arg_item))

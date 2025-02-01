@@ -11,7 +11,7 @@ dataset_path ../dataset/
 dataset cifar100_noise
 model_name resnet32
 lr_schedule cosine
-rho_lst [0.2, 0.1]
+agsam_lambda 2.0
 img_size 32
 random_seed 765
 log_dir None
@@ -248,7 +248,7 @@ dataset_path ../dataset/
 dataset cifar100_noise
 model_name resnet32
 lr_schedule cosine
-rho_lst [0.2, 0.1]
+agsam_lambda 2.0
 img_size 32
 random_seed 765
 log_dir None
@@ -485,7 +485,7 @@ dataset_path ../dataset/
 dataset cifar100_noise
 model_name resnet32
 lr_schedule cosine
-rho_lst [0.2, 0.1]
+agsam_lambda 2.0
 img_size 32
 random_seed 765
 log_dir None
@@ -722,7 +722,7 @@ dataset_path ../dataset/
 dataset cifar100_noise
 model_name resnet32
 lr_schedule cosine
-rho_lst [0.1, 0.05]
+agsam_lambda 2.0]
 img_size 32
 random_seed 765
 log_dir None

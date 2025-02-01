@@ -5,13 +5,13 @@ epochs 200
 learning_rate 0.1
 momentum 0.9
 threads 2
-rho 2.0
+rho 1.0
 weight_decay 0.0005
 dataset_path ../dataset/
 dataset cifar100
 model_name WRN
 lr_schedule cosine
-rho_lst [2.0, 1.0]
+agsam_lambda 2.0
 img_size 32
 random_seed 42
 log_dir None
@@ -239,13 +239,13 @@ epochs 200
 learning_rate 0.1
 momentum 0.9
 threads 2
-rho 2.0
+rho 1.0
 weight_decay 0.0005
 dataset_path ../dataset/
 dataset cifar100
 model_name densenet121
 lr_schedule cosine
-rho_lst [2.0, 1.0]
+agsam_lambda 2.0
 img_size 32
 random_seed 42
 log_dir None
@@ -472,13 +472,13 @@ epochs 200
 learning_rate 0.1
 momentum 0.9
 threads 2
-rho 2.0
+rho 1.0
 weight_decay 0.0005
 dataset_path ../dataset/
 dataset cifar100
 model_name pyramid101
 lr_schedule cosine
-rho_lst [2.0, 1.0]
+agsam_lambda 2.0
 img_size 32
 random_seed 42
 log_dir None

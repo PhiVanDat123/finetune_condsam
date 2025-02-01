@@ -5,13 +5,13 @@ epochs 200
 learning_rate 0.01
 momentum 0.9
 threads 2
-rho 2.0
+rho 0.05
 weight_decay 0.0001
 dataset_path /mnt/reference/imagenet-2012/imagenet-2012_20210302
 dataset imagenet
 model_name resnet18
 lr_schedule cosine
-rho_lst [0.1, 0.05]
+agsam_lambda 2.0
 img_size 32
 random_seed 42
 log_dir logs/imagenet/AgSAM_R18_Scratch_rho0.1_0.05_200e

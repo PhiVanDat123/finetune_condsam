@@ -11,7 +11,7 @@ dataset_path /mnt/reference/imagenet-2012/imagenet-2012_20210302
 dataset imagenet
 model_name resnet18
 lr_schedule cosine
-rho_lst [0.05, 0.05]
+agsam_lambda 2.0
 img_size 32
 random_seed 42
 log_dir logs/imagenet/SAM_R18_pretrained_rho0.05

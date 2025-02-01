@@ -5,13 +5,13 @@ epochs 200
 learning_rate 0.1
 momentum 0.9
 threads 2
-rho 2.0
+rho 0.1
 weight_decay 0.0005
 dataset_path ../dataset/
 dataset cifar10_noise
 model_name resnet32
 lr_schedule cosine
-rho_lst [0.2, 0.1]
+agsam_lambda 2.0
 img_size 32
 random_seed 765
 log_dir None
@@ -241,13 +241,13 @@ epochs 200
 learning_rate 0.1
 momentum 0.9
 threads 2
-rho 2.0
+rho 0.1
 weight_decay 0.0005
 dataset_path ../dataset/
 dataset cifar10_noise
 model_name resnet32
 lr_schedule cosine
-rho_lst [0.2, 0.1]
+agsam_lambda 2.0
 img_size 32
 random_seed 765
 log_dir None
@@ -477,13 +477,13 @@ epochs 200
 learning_rate 0.1
 momentum 0.9
 threads 2
-rho 2.0
+rho 0.1
 weight_decay 0.0005
 dataset_path ../dataset/
 dataset cifar10_noise
 model_name resnet32
 lr_schedule cosine
-rho_lst [0.2, 0.1]
+agsam_lambda 2.0
 img_size 32
 random_seed 765
 log_dir None
@@ -713,13 +713,13 @@ epochs 200
 learning_rate 0.1
 momentum 0.9
 threads 2
-rho 2.0
+rho 0.1
 weight_decay 0.0005
 dataset_path ../dataset/
 dataset cifar10_noise
 model_name resnet32
 lr_schedule cosine
-rho_lst [0.1, 0.1]
+agsam_lambda 2.0
 img_size 32
 random_seed 765
 log_dir None

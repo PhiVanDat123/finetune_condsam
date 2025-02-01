@@ -11,7 +11,7 @@ dataset_path ../dataset/
 dataset OxfordIIITPet
 model_name EfficientNet-B4
 lr_schedule cosine
-rho_lst [0.05, 0.05]
+agsam_lambda 2.0
 img_size 224
 random_seed 123
 log_dir None
@@ -95,7 +95,7 @@ dataset_path ../dataset/
 dataset aircraft
 model_name EfficientNet-B4
 lr_schedule cosine
-rho_lst [0.05, 0.05]
+agsam_lambda 2.0
 img_size 224
 random_seed 123
 log_dir None
@@ -178,7 +178,7 @@ dataset_path ../dataset/
 dataset Flowers102
 model_name EfficientNet-B4
 lr_schedule cosine
-rho_lst [0.05, 0.05]
+agsam_lambda 2.0
 img_size 224
 random_seed 123
 log_dir None
@@ -261,7 +261,7 @@ dataset_path ../dataset/
 dataset Food101
 model_name EfficientNet-B4
 lr_schedule cosine
-rho_lst [0.05, 0.05]
+agsam_lambda 2.0
 img_size 224
 random_seed 123
 log_dir None
@@ -344,7 +344,7 @@ dataset_path ../dataset/
 dataset Country211
 model_name EfficientNet-B4
 lr_schedule cosine
-rho_lst [0.05, 0.05]
+agsam_lambda 2.0
 img_size 224
 random_seed 123
 log_dir None

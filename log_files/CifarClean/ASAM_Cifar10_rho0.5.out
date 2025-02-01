@@ -11,7 +11,7 @@ dataset_path ../dataset/
 dataset cifar10
 model_name WRN
 lr_schedule cosine
-rho_lst [0.05, 0.05]
+agsam_lambda 2.0
 img_size 32
 random_seed 42
 log_dir None
@@ -244,7 +244,7 @@ dataset_path ../dataset/
 dataset cifar10
 model_name pyramid101
 lr_schedule cosine
-rho_lst [0.05, 0.05]
+agsam_lambda 2.0
 img_size 32
 random_seed 42
 log_dir None
@@ -478,7 +478,7 @@ dataset_path ../dataset/
 dataset cifar10
 model_name densenet121
 lr_schedule cosine
-rho_lst [0.05, 0.05]
+agsam_lambda 2.0
 img_size 32
 random_seed 42
 log_dir None
