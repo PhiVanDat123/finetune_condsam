@@ -20,17 +20,17 @@ We list some examples of command lines to train models below:
 ```bash
 
 # Experiments of ImageNet fine-tuning with AgnosticSAM
-python main.py --dataset_path ../dataset --model_name resnet18 --dataset imagenet --epochs 50 --batch_size 2048 --bz_val 512 --bz_test 2048  --rho_lst 0.1_0.05 --training_mode agnosticSAM --learning_rate 0.01 --weight_decay 0.0001 --pretrain
+python main.py --dataset_path ../dataset --model_name resnet18 --dataset imagenet --epochs 50 --batch_size 2048 --bz_val 512 --bz_test 2048  --rho 0.05 --training_mode agnosticSAM --learning_rate 0.01 --weight_decay 0.0001 --pretrain
 
-python main.py --dataset_path ../dataset --model_name resnet34 --dataset imagenet --epochs 50 --batch_size 2048 --bz_val 512 --bz_test 2048  --rho_lst 0.1_0.05 --training_mode agnosticSAM --learning_rate 0.01 --weight_decay 0.0001 --pretrain
+python main.py --dataset_path ../dataset --model_name resnet34 --dataset imagenet --epochs 50 --batch_size 2048 --bz_val 512 --bz_test 2048  --rho 0.05 --training_mode agnosticSAM --learning_rate 0.01 --weight_decay 0.0001 --pretrain
 
-python main.py --dataset_path ../dataset --model_name resnet34 --dataset imagenet --epochs 50 --batch_size 2048 --bz_val 512 --bz_test 2048  --rho_lst 0.1_0.05 --training_mode agnosticSAM --learning_rate 0.01 --weight_decay 0.0001 --pretrain
+python main.py --dataset_path ../dataset --model_name resnet34 --dataset imagenet --epochs 50 --batch_size 2048 --bz_val 512 --bz_test 2048  --rho 0.05 --training_mode agnosticSAM --learning_rate 0.01 --weight_decay 0.0001 --pretrain
 
 
 # Experiments of ImageNet training from scratch with AgnosticSAM
-python main.py --dataset_path ../dataset --dataset imagenet --epochs 200 --model_name resnet18 --batch_size 2048 --bz_val 512 --bz_test 2048  --rho_lst 0.1_0.05 --training_mode agnosticSAM --learning_rate 0.01 --weight_decay 0.0001 
+python main.py --dataset_path ../dataset --dataset imagenet --epochs 200 --model_name resnet18 --batch_size 2048 --bz_val 512 --bz_test 2048  --rho 0.05 --training_mode agnosticSAM --learning_rate 0.01 --weight_decay 0.0001 
 
-python main.py --dataset_path ../dataset --dataset imagenet --epochs 200 --model_name resnet34 --batch_size 2048 --bz_val 512 --bz_test 2048  --rho_lst 0.1_0.05 --training_mode agnosticSAM --learning_rate 0.01 --weight_decay 0.0001 
+python main.py --dataset_path ../dataset --dataset imagenet --epochs 200 --model_name resnet34 --batch_size 2048 --bz_val 512 --bz_test 2048  --rho 0.05 --training_mode agnosticSAM --learning_rate 0.01 --weight_decay 0.0001 
 ```
 
 ### Experiments with Cifar dataset under noisy label condition
@@ -39,13 +39,13 @@ python main.py --dataset_path ../dataset --dataset imagenet --epochs 200 --model
 # Experiments on Cifar100_noise with AgnosticSAM
 
 python main.py  --dataset_path ../dataset/ --dataset cifar100_noise --epochs 200 --model_name resnet32 --random_seed 765 \
---batch_size 512 --bz_val 128  --rho_lst 0.2_0.1 --training_mode agnosticSAM --label_noise_rate 0.2
+--batch_size 512 --bz_val 128  --rho 0.1 --training_mode agnosticSAM --label_noise_rate 0.2
 
  
 # Experiments on Cifar10_noise with AgnosticSAM
 
 python main.py  --dataset_path ../dataset/ --dataset cifar10_noise --epochs 200 --model_name resnet32 --random_seed 765 \
---batch_size 512 --bz_val 128  --rho_lst 0.2_0.1 --training_mode agnosticSAM --label_noise_rate 0.2
+--batch_size 512 --bz_val 128  --rho 0.1 --training_mode agnosticSAM --label_noise_rate 0.2
 
 ```
 
