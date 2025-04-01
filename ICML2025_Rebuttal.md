@@ -6,7 +6,7 @@
 
 &nbsp;
 
-**Table 2: Domain Generalization setting. All models are trained on ImageNet-1k and then evaluated on ImageNet-1k (clean validation set), Imagenet-R, and Imagenet-C datasets.**
+**Table 2: Domain Generalization setting. All models are trained on ImageNet-1k and then evaluated on ImageNet-1k (clean validation set), Imagenet-R (which contains artistic renditions of ImageNet-1K), and ImageNet-C (with severity 1, which includes various corruptions such as blur, noise, and weather). Both ImageNet-R and ImageNet-C introduce distributional shifts relative to the original training set.**
 |  |  | Top-1 Acc |  |  | Top-5 Acc |  |
 |---|---|---|---|---|---|---|
 |  | Imagenet | ImageNet-R | ImageNet-C | Imagenet | ImageNet-R | ImageNet-C |
