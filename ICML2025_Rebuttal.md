@@ -19,7 +19,7 @@
 
 &nbsp;
 
-**Table 3: Classification accuracy on the CIFAR datasets.**
+**Table 3: Additional experiments on CIFAR datasets with GSAM and LookSAM.**
 | Method | WideResnet28x10 | Pyramid101 | Densenet121 |
 |---|---|---|---|
 | **Dataset CIFAR-100** |  |  |
