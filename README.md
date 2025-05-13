@@ -11,7 +11,7 @@ Create a folder `../dataset` to save downloaded datasets, when you run experimen
 ## Training model
 We provide some training logs in folder [log_files](log_files).
   
-The script for all experiments is located in the folder [run_script](run_script) except for experiments with the MAML setting.
+The script for all experiments is located in the folder [run_script](run_script).
 
 We list some examples of command lines to train models below:
 
