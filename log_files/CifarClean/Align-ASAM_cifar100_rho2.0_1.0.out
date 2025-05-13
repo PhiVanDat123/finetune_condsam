@@ -17,7 +17,7 @@ random_seed 42
 log_dir None
 fine_tune False
 bz_val 32
-training_mode agnosticSAM
+training_mode alignSAM
 label_noise_rate 0.2
 pretrain False
 base_op sgd
@@ -25,7 +25,7 @@ eval_only False
 Files already downloaded and verified
 Files already downloaded and verified
 ===
-Train with train_agnosticSAM
+Train with train_alignSAM
 ===
 ┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━╸T╺╸R╺╸A╺╸I╺╸N╺━━━━━━━━━━━━━━━━┳━━━━━━━╸S╺╸T╺╸A╺╸T╺╸S╺━━━━━━━┳━━━━━━━╸V╺╸A╺╸L╺╸I╺╸D╺━━━━━━━┓
 ┃              ┃              ╷              ╷              ┃              ╷              ┃              ╷              ┃
@@ -251,7 +251,7 @@ random_seed 42
 log_dir None
 fine_tune False
 bz_val 32
-training_mode agnosticSAM
+training_mode alignSAM
 label_noise_rate 0.2
 pretrain False
 base_op sgd
@@ -259,7 +259,7 @@ eval_only False
 Files already downloaded and verified
 Files already downloaded and verified
 ===
-Train with train_agnosticSAM_Sep
+Train with train_alignSAM_Sep
 ===
 ┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━╸T╺╸R╺╸A╺╸I╺╸N╺━━━━━━━━━━━━━━━━┳━━━━━━━╸S╺╸T╺╸A╺╸T╺╸S╺━━━━━━━┳━━━━━━━╸V╺╸A╺╸L╺╸I╺╸D╺━━━━━━━┓
 ┃              ┃              ╷              ╷              ┃              ╷              ┃              ╷              ┃
@@ -484,7 +484,7 @@ random_seed 42
 log_dir None
 fine_tune False
 bz_val 32
-training_mode agnosticSAM
+training_mode alignSAM
 label_noise_rate 0.2
 pretrain False
 base_op sgd
@@ -492,7 +492,7 @@ eval_only False
 Files already downloaded and verified
 Files already downloaded and verified
 ===
-Train with train_agnosticSAM_Sep
+Train with train_alignSAM_Sep
 ===
 ┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━╸T╺╸R╺╸A╺╸I╺╸N╺━━━━━━━━━━━━━━━━┳━━━━━━━╸S╺╸T╺╸A╺╸T╺╸S╺━━━━━━━┳━━━━━━━╸V╺╸A╺╸L╺╸I╺╸D╺━━━━━━━┓
 ┃              ┃              ╷              ╷              ┃              ╷              ┃              ╷              ┃
