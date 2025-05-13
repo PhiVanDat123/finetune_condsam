@@ -25,7 +25,7 @@ import torchvision
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from optimizer.sam import SAM, FriendlySAM
-from optimizer.AgnosticSAM import AgnosticSAM
+from optimizer.AlignSAM import AlignSAM
 
 import torchvision.transforms as transforms
 
@@ -107,17 +107,17 @@ def lr_schedule(args, optimizer):
         scheduler = StepLR(optimizer, args.learning_rate, args.epochs+1)
     return scheduler
 
-def train_agnosticSAM(args, model, dataset):
+def train_AlignSAM(args, model, dataset):
 
-    print("===\nTrain with train_agnosticSAM\n===")
+    print("===\nTrain with train_AlignSAM\n===")
     base_optimizer = torch.optim.SGD
     if args.base_op == "adam":
         base_optimizer = torch.optim.Adam
-        optimizer = AgnosticSAM(model.parameters(), base_optimizer, adaptive=args.adaptive,
+        optimizer = AlignSAM(model.parameters(), base_optimizer, adaptive=args.adaptive,
                               lr=args.learning_rate, weight_decay=args.weight_decay, agsam_lambda=args.agsam_lambda)
     else:
         base_optimizer = torch.optim.SGD
-        optimizer = AgnosticSAM(model.parameters(), base_optimizer, adaptive=args.adaptive,
+        optimizer = AlignSAM(model.parameters(), base_optimizer, adaptive=args.adaptive,
                               lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay, agsam_lambda=args.agsam_lambda)
     
     optimizer.assign_name(model)
@@ -404,12 +404,12 @@ if __name__ == "__main__":
     parser.add_argument("--dataset", type=str, default="cifar10", help="name of dataset to load")
     parser.add_argument("--model_name", type=str, default="WRN", help="model_name to load")
     parser.add_argument("--lr_schedule", type=str, default="cosine", help="lr_schedule: step, cosine")
-    parser.add_argument("--agsam_lambda", type=float, default=2.0, help="trade-off agsam_lambda for AgnosticSAM")
+    parser.add_argument("--agsam_lambda", type=float, default=2.0, help="trade-off agsam_lambda for AlignSAM")
     parser.add_argument("--img_size", type=int, default=32, help="Size of input image")
     parser.add_argument("--random_seed", type=int, default=42, help="Random seed")
     parser.add_argument("--log_dir", type=str, default=None, help="folder to save model")
     parser.add_argument("--fine_tune", action="store_true", help="fine tunning model")
-    parser.add_argument("--training_mode", type=str, default="sam", help="training mode: sgd, sam, fsam, agnosticSAM")
+    parser.add_argument("--training_mode", type=str, default="sam", help="training mode: sgd, sam, fsam, alignSAM")
     parser.add_argument("--label_noise_rate", type=float, default=0.0)
 
     parser.add_argument("--pretrain", action="store_true", help="using pretrained model")
@@ -478,8 +478,8 @@ if __name__ == "__main__":
 
     model.to(device)
 
-    if args.training_mode in ["agnosticSAM"]:
-        train_agnosticSAM(args, model, dataset)
+    if args.training_mode in ["AlignSAM"]:
+        train_AlignSAM(args, model, dataset)
     elif args.training_mode in ["sam", "fsam"]:
         train_sam(args, model, dataset) 
     elif args.training_mode in ["sgd"]:
