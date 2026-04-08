@@ -1,5 +1,7 @@
 # Align-SAM: Seeking Flatter Minima for Better Train-Validation Alignment
-This is the official implementation of Align-SAM
+This is the official implementation of [Align-SAM: Seeking Flatter Minima for Better Train-Validation Alignment](https://openreview.net/forum?id=LvllbDxKZt)
+
+The paper is accepted at ICLR2026
 
 ## Environment
 Using Anaconda to install  
@@ -47,6 +49,18 @@ python main.py  --dataset_path ../dataset/ --dataset cifar100_noise --epochs 200
 python main.py  --dataset_path ../dataset/ --dataset cifar10_noise --epochs 200 --model_name resnet32 --random_seed 765 \
 --batch_size 512 --bz_val 128  --rho 0.1 --training_mode alignSAM --label_noise_rate 0.2
 
+```
+
+### Cite
+```
+@inproceedings{
+nguyen2026alignsam,
+title={Align-{SAM}: Seeking Flatter Minima for Better Cross-Subset Alignment},
+author={Van-Anh Nguyen and Mehrtash Harandi and Thanh-Toan Do and Linh Ngo Van and Dinh Phung and Trung Le},
+booktitle={The Fourteenth International Conference on Learning Representations},
+year={2026},
+url={https://openreview.net/forum?id=LvllbDxKZt}
+}
 ```
 
 ### Acknowledgement
