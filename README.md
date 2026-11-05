@@ -4,16 +4,37 @@ This repository extends Align-SAM with the supplied `condsam.py` and `gram.py`.
 The commands below run CondSAM on the models and datasets from Table 4; they do
 not represent the published Align-SAM results.
 
-## Setup
+## Environment
 
-Use an environment with compatible PyTorch and torchvision installations.
-The original environment specification is in [environment.yml](environment.yml).
-Triton is optional; Gram computations have a PyTorch fallback.
+Create and activate the original Anaconda environment from the repository root:
 
-Store datasets in `../dataset`. Loaders attempt downloads when
-needed. Stanford Cars may require manual preparation in torchvision's expected layout.
-Run commands from the AlignSAM directory:
+```
+conda env create -f environment.yml
+conda activate agnostic_sam
+```
 
+`environment.yml` is the original environment specification and contains Linux
+packages. On Windows, create a compatible PyTorch/torchvision environment if the
+original specification cannot be installed directly. Triton is optional; Gram
+computations have a PyTorch fallback.
+
+## Dataset
+
+Create `../dataset` to store datasets, as in the original README:
+
+
+Datasets are automatically downloaded by the loaders when training or evaluating
+with `--dataset_path ../dataset`; the original README did not provide a separate
+download command. Pretrained ImageNet weights are downloaded during fine-tuning
+if they are not already cached.
+
+```
+python run_script/condsam_transfer.py --mode train_eval --dataset_path ../dataset
+```
+
+Stanford Cars may require manual preparation in torchvision's expected layout
+if the original download source is unavailable. All commands below run from the
+`AlignSAM` directory.
 
 ## Fine-tune and immediately evaluate each checkpoint
 
