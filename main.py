@@ -417,6 +417,11 @@ if __name__ == "__main__":
     parser.add_argument("--eval_only", action="store_true", help="Only eval model")
     parser.add_argument("--debug", action="store_true", help="Only eval model")
     
+    parser.add_argument('--cond_beta', type=float, default=0.95)
+    parser.add_argument('--cond_eps', type=float, default=1e-8)
+    parser.add_argument('--cond_power_iters', type=int, default=1)
+    parser.add_argument('--cond_stats_every', type=int, default=1)
+    parser.add_argument('--cond_no_cuda_graphs', action='store_true')
     args = parser.parse_args()
     
     for arg_item in vars(args):
@@ -478,11 +483,15 @@ if __name__ == "__main__":
 
     model.to(device)
 
-    if args.training_mode in ["AlignSAM"]:
+    if args.training_mode.lower() == 'condsam':
+        from optimizer.condsam_training import run
+        run(args, model, dataset)
+    elif args.training_mode in ["AlignSAM"]:
         train_AlignSAM(args, model, dataset)
     elif args.training_mode in ["sam", "fsam"]:
         train_sam(args, model, dataset) 
     elif args.training_mode in ["sgd"]:
         train_sgd(args, model, dataset)
     else: print("Please check the training_mode")
-    log.flush()
+    if args.training_mode.lower() != 'condsam':
+        log.flush()

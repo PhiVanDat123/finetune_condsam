@@ -261,8 +261,6 @@ class AirCraft_dataset:
             self.classes = torch.arange(102)
         elif dataset == "Country211":
             # Hard code root for dataset
-            if not os.path.exists(os.path.join(root, "country211")):
-                root = "~/pb90_scratch/juliaN/dataset/"
             train_set = torchvision.datasets.Country211(root, split="train", download=True, transform=train_transform)
             val_set = torchvision.datasets.Country211(root, split="valid", download=True, transform=train_transform)
             full_train_set = ConcatDataset([train_set, val_set])
@@ -273,8 +271,6 @@ class AirCraft_dataset:
             test_dataset = torchvision.datasets.StanfordCars(root, split="test", download=True, transform=test_transform)
         elif dataset == "Food101":
             # Hard code root for dataset
-            if not os.path.exists(os.path.join(root, "food-101")):
-                root = "~/pb90_scratch/juliaN/dataset/"
             full_train_set = torchvision.datasets.Food101(root, split="train", download=True, transform=train_transform)
             test_dataset = torchvision.datasets.Food101(root, split="test", download=True, transform=test_transform)
         elif dataset == "imagenet":

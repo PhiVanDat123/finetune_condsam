@@ -1,0 +1,573 @@
+"""Empirical Kronecker-factor conditioning for SAM perturbations only."""
+
+import math
+import threading
+import warnings
+from contextlib import contextmanager
+
+import torch
+import torch.distributed as dist
+import torch.nn.functional as F
+
+from .gram import gram_accumulate, normalize_into
+from collections import defaultdict
+
+
+class _PerturbationPolicy:
+    """Minimal SAM policy interface; descent is handled by the training optimizer."""
+    def __init__(self, params, rho, eps):
+        if not math.isfinite(rho) or rho < 0 or not math.isfinite(eps) or eps <= 0:
+            raise ValueError('rho must be finite/nonnegative and eps finite/positive')
+        self.params = list(params)
+        self.options = dict(rho=rho, eps=eps)
+        self.state = defaultdict(dict)
+
+    def _gradients(self):
+        gradients = {p: p.grad for p in self.params if p.grad is not None}
+        if any(g.is_sparse for g in gradients.values()):
+            raise ValueError('CondSAM does not support sparse gradients')
+        return gradients
+
+    @staticmethod
+    def _normalizer(directions):
+        return torch.stack([d.double().square().sum() for d in directions.values()]).sum().sqrt()
+
+    @torch.no_grad()
+    def perturbations(self):
+        if self.options['rho'] == 0:
+            return {}
+        directions = self._directions()
+        if not directions:
+            return {}
+        norm = self._normalizer(directions)
+        if not torch.isfinite(norm):
+            raise FloatingPointError('Non-finite CondSAM direction norm')
+        if norm == 0:
+            return {}
+        deltas = {p: (d.double() * (self.options['rho'] / (norm + self.options['eps']))).to(p.dtype)
+                  for p, d in directions.items()}
+        if any(not torch.isfinite(d).all() for d in deltas.values()):
+            raise FloatingPointError('Non-finite CondSAM perturbation')
+        return deltas
+
+    def state_dict(self):
+        return dict(policy=type(self).__name__, options=dict(self.options),
+                    shapes=[tuple(p.shape) for p in self.params],
+                    state=[dict(self.state[p]) for p in self.params])
+
+    def load_state_dict(self, checkpoint):
+        if checkpoint['shapes'] != [tuple(p.shape) for p in self.params]:
+            raise ValueError('CondSAM checkpoint parameter shapes do not match')
+        if len(checkpoint['state']) != len(self.params):
+            raise ValueError('CondSAM checkpoint parameter count does not match')
+        self.options.update(checkpoint['options'])
+        self.state = defaultdict(dict)
+        for p, state in zip(self.params, checkpoint['state']):
+            self.state[p] = {k: v.to(p.device) if torch.is_tensor(v) else v for k, v in state.items()}
+
+
+
+class CondSAM(_PerturbationPolicy):
+    STATS_CHUNK_BYTES = 1024**3
+    CUDA_GRAPHS = True
+    TRITON_GRAM = True
+    SIDE_STREAM = True
+
+    def __init__(self, params, rho=0.05, beta=0.95, eps=1e-8, power_iters=1, stats_every=1):
+        super().__init__(params, rho=rho, eps=eps)
+        if not math.isfinite(beta) or not 0 <= beta < 1:
+            raise ValueError('CondSAM beta must be in [0, 1)')
+        self._validate_power_iters(power_iters)
+        if isinstance(stats_every, bool) or not isinstance(stats_every, int) or stats_every < 1:
+            raise ValueError('CondSAM stats_every must be a positive integer')
+        self.options.update(beta=beta, power_iters=power_iters, stats_every=stats_every)
+        self._distributed = False
+        self._process_group = None
+        self._stats_buffers = {}
+        self._observations = 0
+        self._update_graph = None
+        self._perturb_graph = None
+        self._grad_source = None
+        self._warned_unobserved = False
+        self._group_plan = None
+        self._side_streams = {}
+
+    @staticmethod
+    def _validate_power_iters(value):
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError('CondSAM power_iters must be a positive integer')
+
+    @staticmethod
+    def _invalid(values):
+        # x * 0 is 0 for finite x and NaN otherwise, so each norm is 0 or NaN:
+        # a few multi-tensor kernels instead of one reduction per tensor.
+        norms = torch._foreach_norm(torch._foreach_mul(values, 0.))
+        return (~torch.isfinite(torch.stack(norms))).any().to(torch.int32)
+
+    def _finite_many(self, values, name):
+        if not values:
+            return
+        invalid = self._invalid(values)
+        if self._distributed:
+            dist.all_reduce(invalid, op=dist.ReduceOp.MAX, group=self._process_group)
+        if invalid.item():
+            raise FloatingPointError(f'CondSAM non-finite {name}')
+
+    @classmethod
+    def _outer_sum(cls, rows, out=None, alpha=1.):
+        result = out if out is not None else rows.new_zeros((rows.shape[-1], rows.shape[-1]), dtype=torch.float32)
+        return gram_accumulate(rows, result, alpha, use_triton=cls.TRITON_GRAM)
+
+    @torch.no_grad()
+    def _accumulate(self, module, activation, grad, batch_size, observation):
+        a_sum, b_sum, count = observation
+        if isinstance(module, torch.nn.Linear):
+            a = activation.reshape(-1, activation.shape[-1])
+            b = grad.reshape(-1, grad.shape[-1])
+            self._outer_sum(a, out=a_sum)
+            self._outer_sum(b, out=b_sum, alpha=batch_size ** 2)
+            count.add_(a.shape[0])
+            return
+        # Output side: one pass over every position (a view for channels_last)
+        b = grad.permute(0, 2, 3, 1).reshape(-1, b_sum.shape[0])
+        self._outer_sum(b, out=b_sum, alpha=batch_size ** 2)
+        count.add_(b.shape[0])
+        padding = module.padding
+        if isinstance(padding, int):
+            padding = (padding, padding)
+        if (module.kernel_size == (1, 1) and not isinstance(padding, str) and not any(padding)):
+            # A 1x1 patch is the (strided) input itself: no im2col copy
+            image = activation[:, :, ::module.stride[0], ::module.stride[1]]
+            self._outer_sum(image.permute(0, 2, 3, 1).reshape(-1, a_sum.shape[0]), out=a_sum)
+            return
+        # Materialize ~STATS_CHUNK_BYTES of patches at a time; the sum is the
+        # same as over the whole batch.
+        positions = grad.shape[-2] * grad.shape[-1]
+        chunk_size = max(1, self.STATS_CHUNK_BYTES // (activation.element_size() * positions * a_sum.shape[0]))
+        for start in range(0, activation.shape[0], chunk_size):
+            image = activation[start:start+chunk_size]
+            chunk_padding = padding
+            if module.padding_mode != 'zeros' or isinstance(padding, str):
+                image = F.pad(image, module._reversed_padding_repeated_twice,
+                              mode=module.padding_mode if module.padding_mode != 'zeros' else 'constant')
+                chunk_padding = (0, 0)
+            if any(chunk_padding):
+                image = F.pad(image, (chunk_padding[1], chunk_padding[1], chunk_padding[0], chunk_padding[0]))
+            # F.unfold's CUDA implementation launches im2col once per image.
+            # Strided views plus one materialization process the whole chunk.
+            kernel_h, kernel_w = module.kernel_size
+            dilation_h, dilation_w = module.dilation
+            patches = image.unfold(2, dilation_h * (kernel_h - 1) + 1, module.stride[0])
+            patches = patches.unfold(3, dilation_w * (kernel_w - 1) + 1, module.stride[1])
+            patches = patches[..., ::dilation_h, ::dilation_w]
+            self._outer_sum(patches.permute(0, 2, 3, 1, 4, 5).reshape(-1, a_sum.shape[0]), out=a_sum)
+
+    def _layers(self, model):
+        cached = getattr(self, '_layers_cache', None)
+        if cached is not None and cached[0] is model:
+            return cached[1]
+        self._layers_cache = (model, self._find_layers(model))
+        return self._layers_cache[1]
+
+    def _find_layers(self, model):
+        owned = {id(p) for p in self.params}
+        # Shared weights with unsupported owners (e.g. tied embeddings) use SAM.
+        owners = {}
+        for module in model.modules():
+            p = getattr(module, 'weight', None)
+            if isinstance(p, torch.nn.Parameter) and id(p) in owned:
+                owners.setdefault(p, []).append(module)
+        return [(p, modules) for p, modules in owners.items()
+                if p.requires_grad and all(isinstance(m, torch.nn.Linear) or
+                    (isinstance(m, torch.nn.Conv2d) and m.groups == 1) for m in modules)]
+
+    @torch.no_grad()
+    def _update_factors(self, observations):
+        if self._distributed:
+            for values in observations.values():
+                for value in values:
+                    dist.all_reduce(value, group=self._process_group)
+        self._validate_power_iters(self.options['power_iters'])
+        ready, fresh = {}, {}
+        for p, values in observations.items():
+            if 'A' in self.state[p]:
+                ready[p] = values
+            # This synchronization is needed only until a layer is first observed.
+            elif values[2].item() > 0:
+                fresh[p] = values
+            elif not self._warned_unobserved:
+                warnings.warn('CondSAM: a conditioned layer produced no statistics (does its module '
+                              'run through __call__, so that hooks fire?); it keeps the SAM direction')
+                self._warned_unobserved = True
+        if fresh:
+            self._finite_many([t for values in fresh.values() for t in values], 'factor statistics')
+            for p, values in fresh.items():
+                self._init_state(p, self.state[p], values[0].shape[0], values[1].shape[0])
+            # First update runs eagerly; it also warms up cuBLAS for capture
+            self._finite_many(self._ema_and_power(fresh)[1], 'power iteration')
+        if not ready:
+            return
+        if self._graph_ready(ready):
+            flags = torch.stack(self._run_update(ready))
+            if self._distributed:
+                dist.all_reduce(flags, op=dist.ReduceOp.MAX, group=self._process_group)
+            stats_invalid, power_invalid = flags.tolist()
+            if stats_invalid:
+                raise FloatingPointError('CondSAM non-finite factor statistics')
+            if power_invalid:
+                raise FloatingPointError('CondSAM non-finite power iteration')
+        else:
+            self._finite_many([t for values in ready.values() for t in values], 'factor statistics')
+            self._finite_many(self._ema_and_power(ready)[1], 'power iteration')
+
+    def _init_state(self, p, state, in_dim, out_dim):
+        state['A'] = torch.eye(in_dim, device=p.device, dtype=torch.float32)
+        state['B'] = torch.eye(out_dim, device=p.device, dtype=torch.float32)
+        for key, size in [('x', in_dim), ('y', out_dim)]:
+            v = torch.randn(size, device=p.device, dtype=torch.float32)
+            v /= v.norm().clamp_min(torch.finfo(v.dtype).tiny)
+            if self._distributed:
+                src = dist.get_global_rank(self._process_group, 0)
+                dist.broadcast(v, src=src, group=self._process_group)
+            state[key] = v
+        # Factor-only terms of the direction, refreshed with the factors
+        state['spectral'] = torch.zeros((), device=p.device, dtype=torch.float32)
+        state['ab'] = torch.zeros((), device=p.device, dtype=torch.float32)
+
+    @staticmethod
+    def _refresh_terms(state):
+        a, b, x, y = (state[k] for k in ('A', 'B', 'x', 'y'))
+        state['spectral'].copy_((x @ a @ x) * (y @ b @ y))
+        state['ab'].copy_(a.square().sum() * b.square().sum())
+
+    def _groups(self, observations):
+        """Stack the factors of equal size into (k, d, d) tensors, with their power
+        vectors (k, d), and keep each layer's state as views into them, so that a
+        whole group's power iteration is one bmm. The per-layer direction terms
+        become views of one vector per device. Rebuilt when the layers or their
+        state tensors change (first update, a new layer, load_state_dict)."""
+        params = tuple(observations)
+        plan = self._group_plan
+        if (plan is not None and plan['params'] == params
+                and all(self.state[p][k] is view for p, k, view in plan['views'])):
+            return plan
+        views, groups, devices = [], [], {}
+        for i, p in enumerate(params):
+            devices.setdefault(p.device, []).append(i)
+        for matrix, vector in (('A', 'x'), ('B', 'y')):
+            by_shape = {}
+            for i, p in enumerate(params):
+                by_shape.setdefault((p.device, self.state[p][matrix].shape[0]), []).append(i)
+            for (device, _), members in by_shape.items():
+                stacked = torch.stack([self.state[params[i]][matrix] for i in members])
+                vectors = torch.stack([self.state[params[i]][vector] for i in members])
+                for k, i in enumerate(members):
+                    state = self.state[params[i]]
+                    state[matrix], state[vector] = stacked[k], vectors[k]
+                    views += [(params[i], matrix, state[matrix]), (params[i], vector, state[vector])]
+                groups.append(dict(matrix=matrix, device=device, stacked=stacked, vectors=vectors,
+                                   members=torch.tensor(members, device=device)))
+        terms = {}
+        for device, members in devices.items():
+            spectral = torch.stack([self.state[params[i]]['spectral'] for i in members])
+            ab = torch.stack([self.state[params[i]]['ab'] for i in members])
+            for k, i in enumerate(members):
+                state = self.state[params[i]]
+                state['spectral'], state['ab'] = spectral[k], ab[k]
+                views += [(params[i], 'spectral', state['spectral']), (params[i], 'ab', state['ab'])]
+            # Position of each layer within its device's vectors
+            slot = torch.full((len(params),), -1, dtype=torch.long)
+            slot[members] = torch.arange(len(members))
+            terms[device] = dict(spectral=spectral, ab=ab, members=torch.tensor(members, device=device),
+                                 member_list=members, slot=slot.to(device), slot_list=slot.tolist())
+        self._group_plan = plan = dict(params=params, views=views, groups=groups, terms=terms)
+        return plan
+
+    def _ema_and_power(self, observations):
+        """EMA of the factors and power iteration, in place. Returns (‖A‖², ‖B‖²
+        per layer, power-iteration norms): a non-finite statistic reaches the
+        factor through the EMA and so its squared norm."""
+        beta, power_iters = self.options['beta'], self.options['power_iters']
+        plan = self._groups(observations)
+        values = list(observations.values())
+        counts = {}
+        for device, term in plan['terms'].items():
+            count = torch.stack([values[i][2] for i in term['member_list']])
+            counts[device] = (count > 0, count.clamp_min(1))
+        for i, (a_sum, b_sum, _) in enumerate(values):
+            device = plan['params'][i].device
+            active, denominator = counts[device]
+            slot = plan['terms'][device]['slot_list'][i]
+            weight = active[slot].float() * (1 - beta)
+            state = self.state[plan['params'][i]]
+            for key, total in [('A', a_sum), ('B', b_sum)]:
+                # In place: the sums are zeroed before the next collection
+                state[key].lerp_(total.div_(denominator[slot]), weight)
+        norms, quadratic, squares = [], {}, {}
+        for group in plan['groups']:
+            stacked, vectors = group['stacked'], group['vectors']
+            active = counts[group['device']][0][plan['terms'][group['device']]['slot'][group['members']]]
+            for _ in range(power_iters):
+                v = torch.bmm(stacked, vectors.unsqueeze(-1)).squeeze(-1)
+                norm = torch.linalg.vector_norm(v, dim=1, dtype=torch.float64)
+                # A float32 vector is finite iff its float64 norm is
+                norms.append(norm)
+                normalize_into(vectors, v, norm, active)
+            # xᵀAx and ‖A‖² of every layer in the group
+            quadratic[id(group)] = (torch.bmm(stacked, vectors.unsqueeze(-1)).squeeze(-1) * vectors).sum(1)
+            squares[id(group)] = stacked.square().sum((1, 2))
+        checks = []
+        for device, term in plan['terms'].items():
+            per_layer = {}
+            for key in ('A', 'B'):
+                q = torch.empty(len(plan['params']), device=device)
+                sq = torch.empty(len(plan['params']), device=device)
+                for group in plan['groups']:
+                    if group['matrix'] == key and group['device'] == device:
+                        q[group['members']] = quadratic[id(group)]
+                        sq[group['members']] = squares[id(group)]
+                per_layer[key] = (q[term['members']], sq[term['members']])
+            (qa, sa), (qb, sb) = per_layer['A'], per_layer['B']
+            term['spectral'].copy_(qa * qb)
+            term['ab'].copy_(sa * sb)
+            checks += [sa, sb]
+        return checks, norms
+
+    def _graph_ready(self, observations):
+        return self.CUDA_GRAPHS and all(t.is_cuda for values in observations.values() for t in values)
+
+    def _run_update(self, observations):
+        """Replay the checks and the update as one CUDA graph: the same kernels in
+        the same order, without thousands of small launches. Recaptured if any
+        tensor changes. Returns (statistics invalid, power iteration invalid)."""
+        self._groups(observations)
+        tensors = [t for p, values in observations.items()
+                   for t in (*values, *(self.state[p][k] for k in ('A', 'B', 'x', 'y', 'spectral', 'ab')))]
+        key = (tuple(t.data_ptr() for t in tensors), self.options['beta'], self.options['power_iters'])
+        if self._update_graph is None or self._update_graph[0] != key:
+            graph = torch.cuda.CUDAGraph()
+            # Capture records without running; the replay below does the update once.
+            # thread_local: data-loader threads may keep using CUDA meanwhile.
+            with torch.cuda.graph(graph, capture_error_mode="thread_local"):
+                checks, norms = self._ema_and_power(observations)
+                stats_invalid = (~torch.isfinite(torch.cat(checks))).any().to(torch.int32)
+                power_invalid = (~torch.isfinite(torch.cat(norms))).any().to(torch.int32)
+            self._update_graph = (key, graph, (stats_invalid, power_invalid))
+        _, graph, flags = self._update_graph
+        graph.replay()
+        return flags
+
+    @staticmethod
+    def _direction(gradient, state, eps):
+        if 'A' not in state:
+            return gradient.float().clone()
+        g = gradient.float().reshape(gradient.shape[0], -1)
+        x, y = state['x'], state['y']
+        s = y @ g @ x
+        denominator = s + torch.where(s >= 0, eps, -eps)
+        # spectral = (xᵀAx)(yᵀBy) and ab = ‖A‖²‖B‖², cached by _refresh_terms
+        direction = (state['spectral'].square() / (2 * denominator)) * torch.outer(y, x)
+        direction -= (state['ab'] / (2 * g.numel() * (g.square().sum() + eps))) * g
+        direction = torch.where(torch.count_nonzero(direction) == 0, g, direction)
+        return direction.reshape_as(gradient)
+    @contextmanager
+    def observe(self, model, batch_size):
+        """Collect first-pass statistics, including DataParallel replicas.
+
+        The caller controls the forward, loss, backward and parameter selection.
+        Unsupported/functional layers have no factors and retain the SAM direction.
+        """
+        if batch_size <= 0:
+            raise ValueError('batch_size must be positive')
+        # Between refreshes the factors and power vectors are reused as they are
+        self._observations += 1
+        if (self._observations - 1) % self.options['stats_every']:
+            yield
+            return
+        is_ddp = isinstance(model, torch.nn.parallel.DistributedDataParallel)
+        self._process_group = model.process_group if is_ddp else None
+        self._distributed = is_ddp and dist.get_world_size(self._process_group) > 1
+        handles, observations, used = [], {}, set()
+        lock = threading.Lock()
+        layers = self._layers(model)
+        for buffers in self._stats_buffers.values():
+            for value in buffers:
+                value.zero_()
+
+        def hook(p):
+            def forward(module, inputs, output):
+                if not torch.is_tensor(output) or not output.requires_grad:
+                    return
+                # No copy: the input stays alive until backward through this
+                # reference, and its version counter (shared by detach) shows
+                # any in-place change made in between.
+                activation = inputs[0].detach()
+                version = activation._version
+                key = (p, activation.device)
+                with lock:
+                    if key not in observations:
+                        buffers = self._stats_buffers.get(key)
+                        if buffers is None:
+                            out_dim, in_dim = p.shape[0], p.numel() // p.shape[0]
+                            buffers = (
+                                torch.zeros(in_dim, in_dim, device=activation.device, dtype=torch.float32),
+                                torch.zeros(out_dim, out_dim, device=activation.device, dtype=torch.float32),
+                                torch.zeros((), device=activation.device, dtype=torch.float64),
+                            )
+                            self._stats_buffers[key] = buffers
+                        observations[key] = buffers
+
+                @torch.no_grad()
+                def backward(grad):
+                    if activation._version != version:
+                        raise RuntimeError(f'CondSAM: the input of {type(module).__name__} was modified '
+                                           'in place before backward')
+                    derivative = grad.detach()
+                    if not (self.SIDE_STREAM and derivative.is_cuda):
+                        self._accumulate(module, activation, derivative, batch_size, observations[key])
+                        return grad
+                    # Overlap the statistics with the rest of backward: same work,
+                    # on a second stream; the totals are awaited after backward.
+                    main = torch.cuda.current_stream(derivative.device)
+                    with lock:
+                        side = self._side_streams.get(derivative.device)
+                        if side is None:
+                            side = self._side_streams[derivative.device] = torch.cuda.Stream(derivative.device)
+                        used.add((side, derivative.device))
+                    side.wait_stream(main)
+                    with torch.cuda.stream(side):
+                        self._accumulate(module, activation, derivative, batch_size, observations[key])
+                    activation.record_stream(side)
+                    derivative.record_stream(side)
+                    return grad
+
+                with lock:
+                    handles.append(output.register_hook(backward))
+            return forward
+
+        try:
+            for p, modules in layers:
+                for module in modules:
+                    handles.append(module.register_forward_hook(hook(p)))
+            yield
+        finally:
+            for handle in handles:
+                handle.remove()
+            for side, device in used:
+                torch.cuda.current_stream(device).wait_stream(side)
+        pooled = {}
+        # Keep the parameter order identical on every DDP worker, even if a
+        # layer was unused locally. The buffers on the parameter's own device
+        # (zeroed above) are the totals; DataParallel replicas add into them.
+        for p, _ in layers:
+            key = (p, p.device)
+            if key not in self._stats_buffers:
+                out_dim, in_dim = p.shape[0], p.numel() // p.shape[0]
+                self._stats_buffers[key] = (
+                    torch.zeros(in_dim, in_dim, device=p.device, dtype=torch.float32),
+                    torch.zeros(out_dim, out_dim, device=p.device, dtype=torch.float32),
+                    torch.zeros((), device=p.device, dtype=torch.float64),
+                )
+            pooled[p] = self._stats_buffers[key]
+        for (p, device), buffers in observations.items():
+            if device != p.device:
+                for total, value in zip(pooled[p], buffers):
+                    total.add_(value.to(p.device))
+        self._update_factors(pooled)
+
+    @torch.no_grad()
+    def perturbations(self):
+        if self.options['rho'] != 0 and self._graphable():
+            return self._graphed_perturbations()
+        return super().perturbations()
+
+    def _gradients(self):
+        if self._grad_source is not None:
+            # Graph capture: private static copies of the gradients
+            return dict(self._grad_source)
+        return super()._gradients()
+
+    def _graphable(self):
+        return (self.CUDA_GRAPHS
+                and all(p.grad is None or (p.grad.is_cuda and not p.grad.is_sparse) for p in self.params)
+                and any(p.grad is not None for p in self.params))
+
+    def _graphed_perturbations(self):
+        """SAM.perturbations as one CUDA graph, with its four checks read back
+        in a single synchronization."""
+        params = [p for p in self.params if p.grad is not None]
+        key = (tuple(id(p) for p in params), tuple((p.grad.dtype, p.grad.shape) for p in params),
+               self.options['rho'], self.options['eps'], self._graph_key())
+        if self._perturb_graph is None or self._perturb_graph[0] != key:
+            buffers = {p: torch.empty(p.grad.shape, device=p.grad.device,
+                                      dtype=torch.float64 if p.grad.dtype == torch.float64 else torch.float32)
+                       for p in params}
+            graph = torch.cuda.CUDAGraph()
+            self._grad_source = buffers
+            try:
+                # Capture records without running; the replay below computes once
+                with torch.cuda.graph(graph, capture_error_mode="thread_local"):
+                    directions = self._directions()
+                    valid = torch.stack([torch.isfinite(d).all() for d in directions.values()]).all()
+                    norm = self._normalizer(directions)
+                    scale = self.options['rho'] / (norm + self.options['eps'])
+                    deltas = {p: (d.double() * scale).to(p.dtype) for p, d in directions.items()}
+                    fits = torch.stack([torch.isfinite(d).all() for d in deltas.values()]).all()
+                    flags = torch.stack([valid, torch.isfinite(norm), norm == 0, fits])
+            finally:
+                self._grad_source = None
+            self._perturb_graph = (key, graph, buffers, deltas, flags)
+        _, graph, buffers, deltas, flags = self._perturb_graph
+        torch._foreach_copy_(list(buffers.values()), [p.grad for p in buffers])
+        graph.replay()
+        valid, finite_norm, zero, fits = flags.tolist()
+        if not valid:
+            raise FloatingPointError('Non-finite SAM perturbation direction')
+        if not finite_norm:
+            raise FloatingPointError('Non-finite SAM normalization')
+        if zero:
+            return {}
+        if not fits:
+            raise FloatingPointError('SAM perturbation overflows the parameter dtype')
+        # Graph-owned outputs, overwritten by the next call
+        return dict(deltas)
+
+    def _graph_key(self):
+        """State that the captured directions depend on (tensor addresses, branches)."""
+        return tuple(tuple(t.data_ptr() for k, t in sorted(self.state[p].items()) if torch.is_tensor(t))
+                     for p in self.params)
+
+    def _directions(self):
+        return {p: self._direction(g, self.state[p], self.options['eps'])
+                for p, g in self._gradients().items()}
+
+    def state_dict(self):
+        # Per-layer copies: the state tensors are views into shared group tensors
+        checkpoint = super().state_dict() if not self.state else None
+        if checkpoint is not None:
+            return checkpoint
+        return {
+            'policy': type(self).__name__,
+            'options': dict(self.options),
+            'shapes': [tuple(p.shape) for p in self.params],
+            'state': [{k: v.detach().clone() if torch.is_tensor(v) else v
+                       for k, v in self.state[p].items()} for p in self.params],
+        }
+
+    def load_state_dict(self, checkpoint):
+        super().load_state_dict(checkpoint)
+        self._validate_power_iters(self.options['power_iters'])
+        self._stats_buffers.clear()
+        self._update_graph = None
+        self._perturb_graph = None
+        self._group_plan = None
+        for p in self.params:
+            state = self.state[p]
+            if 'A' in state and 'spectral' not in state:   # checkpoint from before the cache
+                state['spectral'] = torch.zeros((), device=p.device, dtype=torch.float32)
+                state['ab'] = torch.zeros((), device=p.device, dtype=torch.float32)
+                self._refresh_terms(state)
+        for state in self.state.values():
+            for key in ('A', 'B', 'x', 'y'):
+                if key in state:
+                    state[key] = state[key].float()
